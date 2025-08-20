@@ -1,19 +1,33 @@
-//app/product.js
+//app/drawer/product.tsx
 import React, { useEffect, useState } from "react";
 import { Button, FlatList, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
-import { addDocument, deleteDocument, getAllDocuments, updateDocument, } from "../services/firestoreService";
+import { addDocument, deleteDocument, getAllDocuments, updateDocument, } from "../../services/firestoreService";
+
+
+interface Product {
+  id: string;
+  category: string;
+  description: string;
+  image: string;
+  name: string;
+  price: number;
+}
+
+type FormField = "category" | "description" | "image" | "name" | "price";
 
 export default function ProductScreen() {
-  const [products, setProducts] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   const [modalVisible, setModalVisible] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Record<FormField, string>>({
     category: "",
     description: "",
     image: "",
     name: "",
     price: "",
   });
+  
 
   const loadData = async () => {
     const data = await getAllDocuments("products");
@@ -74,7 +88,7 @@ export default function ProductScreen() {
     loadData();
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: Product }) => (
     <TouchableOpacity
       style={[styles.item, selectedId === item.id && styles.selectedItem]}
       onPress={() => setSelectedId(item.id)}
@@ -105,7 +119,7 @@ export default function ProductScreen() {
             {selectedId ? "Sửa sản phẩm" : "Thêm sản phẩm"}
           </Text>
 
-          {["category", "description", "image", "name", "price"].map(
+          {(["category", "description", "image", "name", "price"] as FormField[]).map(
             (field) => (
               <View key={field} style={styles.inputGroup}>
                 <Text style={styles.label}>{field}</Text>
