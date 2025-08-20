@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   forgot: {
     textAlign: 'left',
-    fontSize:14,
+    fontSize: 14,
     color: 'blue',
   },
   button: {
