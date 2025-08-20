@@ -44,7 +44,7 @@ export default function SignInScreen(){
   
       if (user && isLoggedIn === 'true') {
         if (pathname !== '/home') {
-          router.replace('/home');
+          router.replace('/drawer/home');
         }
       } else {
         await AsyncStorage.removeItem('isLoggedIn');
@@ -175,7 +175,7 @@ export default function SignInScreen(){
           position: "bottom",
         });
     
-        router.replace("/home"); // 👉 vào trang quản lý
+        router.replace("/drawer/home"); // 👉 vào trang quản lý
       } catch (error: any) {
         Alert.alert("Lỗi", error.message);
       }
@@ -191,7 +191,7 @@ export default function SignInScreen(){
         <InputField icon="mail" placeholder="Email" value={email} onChangeText={setEmail} />
         <InputField icon="lock" placeholder="Mật Khẩu" secureTextEntry value={password} onChangeText={setPassword} />
         <View style={styles.Row}>
-            <TouchableOpacity onPress={() => router.replace('/')}>
+            <TouchableOpacity onPress={() => router.replace('/' as any)}>
             <Text style={styles.forgot}>Quên mật khẩu?</Text>
             </TouchableOpacity>
             {biometricEnabled && biometricType === 'finger' && (
