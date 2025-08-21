@@ -19,7 +19,6 @@ export async function signIn(email: string, password: string) {
 
     const user = userCredential.user;
     const uid = user.uid;
-    console.log('User ID:', uid);
 
     await AsyncStorage.setItem('uid', uid);
     

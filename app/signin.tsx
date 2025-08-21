@@ -43,7 +43,7 @@ export default function SignInScreen(){
       const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
   
       if (user && isLoggedIn === 'true') {
-        if (pathname !== '/home') {
+        if (pathname !== '/drawer/home') {
           router.replace('/drawer/home');
         }
       } else {
@@ -155,19 +155,16 @@ export default function SignInScreen(){
         const isAdmin = tokenResult.claims.admin === true;
     
         if (!isAdmin) {
-          // ❌ Nếu không phải admin -> cấm đăng nhập
           Alert.alert("Lỗi", "Tài khoản này không có quyền admin");
           await AsyncStorage.removeItem("isLoggedIn");
           await AsyncStorage.removeItem("userId");
-          await AsyncStorage.removeItem("role");
+          await AsyncStorage.removeItem("savedEmail");
           return;
         }
-    
-        // ✅ Nếu là admin
-        console.log("👉 Đây là admin, cho phép đăng nhập");
+
         await AsyncStorage.setItem("isLoggedIn", "true");
         await AsyncStorage.setItem("userId", user.uid);
-        await AsyncStorage.setItem("role", "admin");
+        await AsyncStorage.setItem("savedEmail", email);
     
         Toast.show({
           type: "success",
@@ -175,8 +172,10 @@ export default function SignInScreen(){
           position: "bottom",
         });
     
-        router.replace("/drawer/home"); // 👉 vào trang quản lý
+        router.replace("/drawer/home");
       } catch (error: any) {
+        await AsyncStorage.removeItem('isLoggedIn');
+        await AsyncStorage.removeItem('userId');
         Alert.alert("Lỗi", error.message);
       }
     };

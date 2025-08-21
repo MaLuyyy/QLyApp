@@ -13,7 +13,7 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "services/firestoreService.js", "services/productService.js", "app/drawer/order.tsx", "app/drawer/product.tsx"
+, "services/firestoreService.tsx", "services/productService.js", "app/drawer/order.tsx", "app/drawer/product.tsx"
 ]
 }
 
