@@ -38,27 +38,6 @@ export default function SignInScreen(){
     loadSavedEmail();
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
-  
-      if (user && isLoggedIn === 'true') {
-        if (pathname !== '/drawer/home') {
-          router.replace('/drawer/home');
-        }
-      } else {
-        await AsyncStorage.removeItem('isLoggedIn');
-        await AsyncStorage.removeItem('userId');
-  
-        if (pathname !== '/signin') {
-          router.replace('/signin');
-        }
-      }
-      setLoading(false);
-    });
-  
-    return () => unsubscribe();
-  }, [pathname]);
 
   const handleBiometricLogin = async () => {
     try {
@@ -153,16 +132,21 @@ export default function SignInScreen(){
         // Lấy token để check claim
         const tokenResult = await user.getIdTokenResult(true);
         const isAdmin = tokenResult.claims.admin === true;
-    
+        
         if (!isAdmin) {
           Alert.alert("Lỗi", "Tài khoản này không có quyền admin");
-          await AsyncStorage.removeItem("isLoggedIn");
           await AsyncStorage.removeItem("userId");
           await AsyncStorage.removeItem("savedEmail");
           return;
         }
+        const shorten = (str: string, len = 20) =>
+          str?.length > len ? str.substring(0, len) + "..." : str;
+        
+        console.log("tokenResult:", {
+          ...tokenResult,
+          token: shorten(tokenResult.token, 40),
+        });
 
-        await AsyncStorage.setItem("isLoggedIn", "true");
         await AsyncStorage.setItem("userId", user.uid);
         await AsyncStorage.setItem("savedEmail", email);
     
@@ -172,9 +156,8 @@ export default function SignInScreen(){
           position: "bottom",
         });
     
-        router.replace("/drawer/home");
+        router.replace("/drawer/HomeScreen");
       } catch (error: any) {
-        await AsyncStorage.removeItem('isLoggedIn');
         await AsyncStorage.removeItem('userId');
         Alert.alert("Lỗi", error.message);
       }

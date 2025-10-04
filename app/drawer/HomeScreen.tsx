@@ -1,16 +1,14 @@
 //app/drawer/home.tsx
-import  React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebaseConfig";
 import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 
 
 export default function HomeScreen() {
 
   const router = useRouter();
+
   useEffect(() => {
     const getUser = async () => {
       const id = await AsyncStorage.getItem('userId');
@@ -18,20 +16,7 @@ export default function HomeScreen() {
     };
     getUser();
   }, []);
-  
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
-  
-      if (user || isLoggedIn === 'true') {
-        
-      } else {
-        router.replace('/signin');
-      }
-    });
-  
-    return () => unsubscribe();
-  }, []);
+    
 
   return (
     <View style={styles.container}>

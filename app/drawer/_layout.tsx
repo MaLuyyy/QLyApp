@@ -6,10 +6,9 @@ import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawe
 import { useRouter } from "expo-router";
 import { Drawer } from "expo-router/drawer";
 import { signOut } from "firebase/auth";
-import { useState, useEffect } from "react";
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Image, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import Toast from "react-native-toast-message";
-import { Switch } from "react-native";
 
 export default function DrawerLayout() {
 
@@ -29,9 +28,6 @@ export default function DrawerLayout() {
     await AsyncStorage.setItem('biometricEnabled', value.toString());
   };
 
-
-
-
   const handleLogout = async () => {
     try {
       await signOut(auth); // đăng xuất khỏi Firebase
@@ -48,7 +44,6 @@ export default function DrawerLayout() {
       Alert.alert('Lỗi', err.message);
     }
   };
-
 
   return (
     <Drawer
@@ -89,9 +84,10 @@ export default function DrawerLayout() {
         drawerLabelStyle: { color: "#fff", fontSize: 18 },
       }}
     >
-      <Drawer.Screen name="home" options={{ title: "Trang chủ" }} />
-      <Drawer.Screen name="product" options={{ title: "Sản phẩm" }} />
-      <Drawer.Screen name="order" options={{ title: "Đơn hàng" }} />
+      <Drawer.Screen name="HomeScreen" options={{ title: "Trang chủ" }} />
+      <Drawer.Screen name="ProductScreen" options={{ title: "Sản phẩm" }} />
+      <Drawer.Screen name="OrderScreen" options={{ title: "Đơn hàng" }} />
+      <Drawer.Screen name="UserScreen" options={{ title: "Người dùng" }} />
     </Drawer>
   );
 }

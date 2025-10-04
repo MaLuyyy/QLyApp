@@ -98,6 +98,9 @@ function formatFirebaseError(error: any): Error {
     case 'auth/too-many-requests':
       message = 'Tài khoản bị tạm khóa vì đăng nhập sai quá nhiều';
       break;
+    case 'auth/network-request-failed':
+      message = ' Kiểm tra lại đường truyền';
+      break;
   }
   return new Error(message);
 }

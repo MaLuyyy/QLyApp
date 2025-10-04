@@ -2,7 +2,7 @@
 import axios from "axios";
 import { auth } from "../lib/firebaseConfig";
 
-const projectId = "shopapp-d465b"; // 🔑 thay bằng projectId Firebase
+const projectId = "shopapp-d465b";
 const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
 
 // Hàm tiện ích lấy token
@@ -38,7 +38,6 @@ export const getAllDocuments = async (collectionName: string) => {
         Object.entries(doc.fields || {}).map(([k, v]: any) => [k, parseValue(v)])
       ),
     };
-    console.log("✅ Parsed product:", parsedDoc);
     return parsedDoc;
   });
 
