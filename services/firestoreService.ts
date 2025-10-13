@@ -22,9 +22,9 @@ const parseValue = (v: any) => {
 };
 
 // Lấy tất cả documents
-export const getAllDocuments = async (collectionName: string) => {
+export const getAllDocuments = async (collectionName: string, pageSize = 100) => {
   const token = await getToken();
-  const res = await axios.get(`${baseUrl}/${collectionName}`, {
+  const res = await axios.get(`${baseUrl}/${collectionName}?pageSize=${pageSize}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -42,6 +42,38 @@ export const getAllDocuments = async (collectionName: string) => {
   });
 
   return docs;
+};
+
+// 🧩 Lấy documents có phân trang
+export const getDocumentsWithPagination = async (
+  collectionName: string,
+  pageSize = 10,
+  pageToken?: string
+) => {
+  const token = await getToken();
+
+  let url = `${baseUrl}/${collectionName}?pageSize=${pageSize}`;
+  if (pageToken) url += `&pageToken=${pageToken}`;
+
+  const res = await axios.get(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.data.documents) {
+    return { documents: [], nextPageToken: null };
+  }
+
+  const documents = res.data.documents.map((doc: any) => ({
+    id: doc.name.split("/").pop(),
+    ...Object.fromEntries(
+      Object.entries(doc.fields || {}).map(([k, v]: any) => [k, parseValue(v)])
+    ),
+  }));
+
+  return {
+    documents,
+    nextPageToken: res.data.nextPageToken || null,
+  };
 };
 
 // Thêm document
@@ -78,7 +110,7 @@ export const updateDocument = async (collectionName: string, id: string, data: a
   );
 
   const res = await axios.patch(
-    `${baseUrl}/${collectionName}/${id}?updateMask.fieldPaths=*`,
+    `${baseUrl}/${collectionName}/${id}`,
     { fields },
     { headers: { Authorization: `Bearer ${token}` } }
   );

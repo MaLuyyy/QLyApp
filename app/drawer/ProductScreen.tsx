@@ -1,11 +1,12 @@
 // app/drawer/ProductScreen.tsx
 import { Product } from "@/app/types/product";
-import { db } from "@/lib/firebaseConfig";
+import { getDocumentsWithPagination } from "@/services/firestoreService";
 import { getCategoryFromName } from "@/utils/helpers";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import React, { useEffect, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   FlatList,
   Image,
@@ -16,9 +17,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import ProductActionModal from "../components/product/ProductActionModal";
-import { ActivityIndicator } from "react-native";
 import AddProductModal from "../components/product/AddProductModal";
+import ProductActionModal from "../components/product/ProductActionModal";
+import EditProductModal from "../components/product/EditProductModal";
 
 export default function ProductScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -29,45 +30,101 @@ export default function ProductScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pageToken, setPageToken] = useState<string | null>(null);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const animatedHeight = useRef(new Animated.Value(0)).current;
-  const OPTION_HEIGHT = 40; // chiều cao 1 option
-  const MAX_VISIBLE_OPTIONS = 3; // tối đa 3 option
+  const OPTION_HEIGHT = 40;
+  const MAX_VISIBLE_OPTIONS = 3;
 
   const CATEGORY_ORDER = ["all", "foods", "drinks", "fruits", "snacks", "other"];
   const [categories] = useState<string[]>(CATEGORY_ORDER);
 
+  // --- Gọi API load sản phẩm ---
   const loadProducts = async (cat: string, searchText: string) => {
     try {
       setLoading(true);
-      let q;
-      if (cat === "all") {
-        q = collection(db, "products");
+  
+      // Gọi trang đầu
+      const res = await getDocumentsWithPagination("products", 10);
+      let allDocs = res.documents;
+  
+      // Nếu ít hơn 10 mà vẫn còn trang tiếp, load thêm
+      if (res.documents.length < 10 && res.nextPageToken) {
+        const res2 = await getDocumentsWithPagination("products", 10, res.nextPageToken);
+        allDocs = [...res.documents, ...res2.documents];
+        setPageToken(res2.nextPageToken || null);
       } else {
-        q = query(collection(db, "products"), where("category", "==", cat));
+        setPageToken(res.nextPageToken || null);
       }
   
-      const snapshot = await getDocs(q);
-      let data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Product[];
+      // Lọc theo category
+      if (cat !== "all") {
+        allDocs = allDocs.filter((p: Product) => p.category === cat);
+      }
   
+      // Lọc theo từ khóa tìm kiếm
       if (searchText.trim() !== "") {
-        data = data.filter((p) =>
+        allDocs = allDocs.filter((p: Product) =>
           p.name.toLowerCase().includes(searchText.toLowerCase())
         );
       }
   
-      setProducts(data);
+      setProducts(allDocs);
     } catch (err) {
       console.error("Lỗi lấy sản phẩm:", err);
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   };
   
+
+  // --- Load thêm khi cuộn xuống ---
+  const loadMoreProducts = async () => {
+    if (!pageToken || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await getDocumentsWithPagination("products", 10, pageToken);
+      let data = res.documents;
+
+      if (activeCat !== "all") {
+        data = data.filter((p:Product) => p.category === activeCat);
+      }
+
+      if (search.trim() !== "") {
+        data = data.filter((p:Product) =>
+          p.name.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+
+      setProducts((prev) => [...prev, ...data]);
+      setPageToken(res.nextPageToken || null);
+    } catch (err) {
+      console.error("Lỗi load thêm sản phẩm:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Khi màn hình focus hoặc đổi category/search
+  useFocusEffect(
+    useCallback(() => {
+      loadProducts(activeCat, search);
+    }, [activeCat, search])
+  );
+
+  // Dropdown animation
+  useEffect(() => {
+    const visibleCount = Math.min(categories.length, MAX_VISIBLE_OPTIONS);
+    Animated.timing(animatedHeight, {
+      toValue: dropdownOpen ? visibleCount * OPTION_HEIGHT : 0,
+      duration: 250,
+      useNativeDriver: false,
+    }).start();
+  }, [dropdownOpen, categories]);
 
   const openActions = (product: Product) => {
     setSelectedProduct(product);
@@ -79,19 +136,6 @@ export default function ProductScreen() {
     setModalVisible(false);
   };
 
-  useEffect(() => {
-    loadProducts(activeCat, search);
-  }, [activeCat, search]);
-
-  useEffect(() => {
-    const visibleCount = Math.min(categories.length, MAX_VISIBLE_OPTIONS);
-    Animated.timing(animatedHeight, {
-      toValue: dropdownOpen ? visibleCount * OPTION_HEIGHT : 0,
-      duration: 250,
-      useNativeDriver: false,
-    }).start();
-  }, [dropdownOpen, categories]);
-  
   const renderProduct = ({ item }: { item: Product }) => (
     <View style={styles.cardWrapper}>
       <View style={styles.card}>
@@ -128,14 +172,22 @@ export default function ProductScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Manager box */}
+      {/* Header / Bộ lọc */}
       <View style={styles.managerBox}>
-        <TouchableOpacity style={styles.addButton} onPress={() => setAddModalVisible(true)}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setAddModalVisible(true)}
+        >
           <Text style={styles.addText}>+ Thêm món</Text>
         </TouchableOpacity>
 
         <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={18} color="#666" style={{ marginRight: 6 }} />
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#666"
+            style={{ marginRight: 6 }}
+          />
           <TextInput
             placeholder="Tìm kiếm món ăn..."
             value={search}
@@ -144,21 +196,31 @@ export default function ProductScreen() {
           />
         </View>
 
-        {/* SelectBox */}
+        {/* Select Box */}
         <View style={{ position: "relative" }}>
           <TouchableOpacity
             style={[
               styles.selectBox,
-              dropdownOpen && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
+              dropdownOpen && {
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+              },
             ]}
             onPress={() => setDropdownOpen(!dropdownOpen)}
           >
-            <Text style={styles.selectedText}>{getCategoryFromName(activeCat)}</Text>
-            <Ionicons name={dropdownOpen ? "chevron-up" : "chevron-down"} size={18} color="#333" />
+            <Text style={styles.selectedText}>
+              {getCategoryFromName(activeCat)}
+            </Text>
+            <Ionicons
+              name={dropdownOpen ? "chevron-up" : "chevron-down"}
+              size={18}
+              color="#333"
+            />
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Dropdown */}
       <Animated.View
         style={[
           styles.dropdownWrapper,
@@ -168,11 +230,7 @@ export default function ProductScreen() {
           },
         ]}
       >
-        <ScrollView
-          style={{ flexGrow: 0 }}
-          showsVerticalScrollIndicator
-          nestedScrollEnabled
-        >
+        <ScrollView style={{ flexGrow: 0 }} showsVerticalScrollIndicator={false}>
           {categories.map((item) => (
             <TouchableOpacity
               key={item}
@@ -182,13 +240,12 @@ export default function ProductScreen() {
                 setDropdownOpen(false);
               }}
             >
-                    <Text style={styles.optionText}>{getCategoryFromName(item)}</Text>
+              <Text style={styles.optionText}>{getCategoryFromName(item)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </Animated.View>
 
-      {/* Overlay render sau cùng (zIndex thấp hơn dropdown) */}
       {dropdownOpen && (
         <TouchableOpacity
           style={styles.overlay}
@@ -196,9 +253,10 @@ export default function ProductScreen() {
           onPress={() => setDropdownOpen(false)}
         />
       )}
-      {/* List sản phẩm */}
+
+      {/* Danh sách sản phẩm */}
       {loading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View style={styles.centerBox}>
           <ActivityIndicator size="large" color="blue" />
           <Text style={{ marginTop: 10, color: "#666" }}>Đang tải dữ liệu...</Text>
         </View>
@@ -208,6 +266,13 @@ export default function ProductScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderProduct}
           style={{ marginTop: 10 }}
+          onEndReached={loadMoreProducts} // gọi khi cuộn gần cuối
+          onEndReachedThreshold={0.05} // 5% cuối danh sách
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator style={{ marginVertical: 12 }} size="small" color="gray" />
+            ) : null
+          }
           ListEmptyComponent={
             <Text style={{ textAlign: "center", marginTop: 20, color: "#666" }}>
               Không có sản phẩm
@@ -216,17 +281,30 @@ export default function ProductScreen() {
         />
       )}
 
+      {/* Modals */}
       <ProductActionModal
         visible={modalVisible}
         product={selectedProduct}
         onClose={closeActions}
+        onDeleted={(id) => {
+          setProducts((prev) => prev.filter((p) => p.id !== id)); // xoá ngay khỏi danh sách
+        }}
+        onEdit={(product) => {
+          setEditingProduct(product);
+          setEditModalVisible(true);
+        }}
       />
       <AddProductModal
         visible={addModalVisible}
         onClose={() => setAddModalVisible(false)}
         onSuccess={() => loadProducts(activeCat, search)}
       />
-
+      <EditProductModal
+        visible={editModalVisible}
+        product={editingProduct}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={() => loadProducts(activeCat, search)}
+      />
     </View>
   );
 }
@@ -242,7 +320,6 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     zIndex: 1000,
   },
-
   managerBox: {
     backgroundColor: "#f9fafb",
     padding: 12,
@@ -257,7 +334,6 @@ const styles = StyleSheet.create({
     elevation: 7,
     zIndex: 1000,
   },
-
   addButton: {
     backgroundColor: "#f97316",
     alignSelf: "flex-end",
@@ -267,7 +343,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   addText: { color: "#fff", fontWeight: "bold" },
-
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,7 +354,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: "#fff",
   },
-
   selectBox: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -292,10 +366,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   selectedText: { fontSize: 14, color: "#333" },
-
   dropdownWrapper: {
     position: "absolute",
-    top: 175, // ngay dưới selectBox
+    top: 175,
     left: 0.6,
     right: 0,
     marginHorizontal: 24,
@@ -308,13 +381,6 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 8,
     borderBottomRightRadius: 8,
   },
-  dropdownList: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    borderTopWidth: 0,
-    backgroundColor: "#fff",
-  },
   option: {
     paddingHorizontal: 12,
     justifyContent: "center",
@@ -323,7 +389,6 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   optionText: { fontSize: 14, color: "#333" },
-
   cardWrapper: { borderRadius: 10, overflow: "hidden" },
   card: {
     flexDirection: "row",
@@ -368,4 +433,5 @@ const styles = StyleSheet.create({
   category: { backgroundColor: "#f97316" },
   footer: { flexDirection: "row", alignItems: "center" },
   price: { color: "#ef4444", fontWeight: "bold", marginRight: 8 },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
 });

@@ -1,9 +1,14 @@
-import { Product } from "@/app/types/product";
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
-import { Modal, ScrollView, TextInput, TouchableOpacity, View, StyleSheet, Text, Image, Alert, ActivityIndicator, Animated } from "react-native";
 import { addDocument } from "@/services/firestoreService";
 import { getCategoryFromName } from "@/utils/helpers";
+import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from "expo-image-picker";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import ActionSheet from "react-native-actionsheet";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Toast from "react-native-toast-message";
+import { Product } from "@/app/types/product";
 
 interface Props{
     visible: boolean;
@@ -12,10 +17,10 @@ interface Props{
 }
 
 export default function AddProductModal({visible, onClose, onSuccess }: Props){
-    const[name, setName] = useState("");
-    const[category, setCategory] = useState("");
-    const[price, setPrice] = useState("");
-    const [desc, setDesc] = useState("");
+    const [name, setName] = useState("");
+    const [category, setCategory] = useState("");
+    const [price, setPrice] = useState("");
+    const [description, setDescription] = useState("");
     const [image, setImage] = useState<string | null>(null);
 
     const CATEGORY_ORDER = ["foods", "drinks", "fruits", "snacks", "other"];
@@ -24,16 +29,33 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
     const animatedHeight = useRef(new Animated.Value(0)).current;
     const OPTION_HEIGHT = 40; // chiều cao 1 option
     const MAX_VISIBLE_OPTIONS = 3; // tối đa 3 option
+    const actionSheetRef = useRef<ActionSheet>(null);
+    const TEMP_IMAGE_KEY = "@temp_product_image";
 
     const [loading, setLoading] = useState(false);
 
-    const resetForm = () => {
-        setName("");
-        setCategory("");
-        setPrice("");
-        setDesc("");
+    const clearTempImage = async () => {
+      try {
+        await AsyncStorage.removeItem(TEMP_IMAGE_KEY);
         setImage(null);
+      } catch (err) {
+        console.error("❌ Lỗi xóa ảnh tạm:", err);
+      }
     };
+    const saveTempImage = async (base64: string) => {
+      try {
+        await AsyncStorage.setItem(TEMP_IMAGE_KEY, base64);
+        setImage(base64);
+      } catch (err) {
+        console.error("❌ Lỗi lưu ảnh tạm:", err);
+      }
+    };
+
+    useEffect(() => {
+      if (visible) {
+        clearTempImage();
+      }
+    }, [visible]);
 
     useEffect(() => {
       const visibleCount = Math.min(categories.length, MAX_VISIBLE_OPTIONS);
@@ -43,10 +65,65 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
         useNativeDriver: false,
       }).start();
     }, [dropdownOpen, categories]);
+
+    const pickFromCamera = async () => {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") return Alert.alert("Cần cấp quyền camera");
+  
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+  
+      if (!result.canceled && result.assets[0]) {
+        const base64 = await convertImageToBase64(result.assets[0].uri);
+        await saveTempImage(base64);
+      }
+    };
+
+    const pickFromLibrary = async () => {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") return Alert.alert("Cần quyền truy cập thư viện ảnh");
+  
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+  
+      if (!result.canceled && result.assets[0]) {
+        const base64 = await convertImageToBase64(result.assets[0].uri);
+        await saveTempImage(base64);
+      }
+    };
+
+    const convertImageToBase64 = async (uri: string): Promise<string> => {
+      let fileUri = uri;
+      if (fileUri.startsWith("content://")) {
+        const newPath = FileSystem.cacheDirectory + "temp_image.jpg";
+        await FileSystem.copyAsync({ from: fileUri, to: newPath });
+        fileUri = newPath;
+      }
+      const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    };
+
+    const resetForm = async () => {
+        setName("");
+        setCategory("");
+        setPrice("");
+        setDescription("");
+        setImage(null);
+        await AsyncStorage.removeItem(TEMP_IMAGE_KEY);
+    };
     
     const handleChooseImage = () => {
-        // TODO: bạn có thể tích hợp expo-image-picker
-        console.log("Chọn ảnh");
+      actionSheetRef.current?.show();
     };
 
     const handleAdd = async () => {
@@ -66,30 +143,39 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
       if (numericPrice % 1000 !== 0) {
         Alert.alert("Lỗi", "Giá phải chia hết cho 1000 (VD: 10000, 25000)");
         return;
-      }
-
-      const newProduct = {
-        name,
-        category,
-        price: numericPrice,
-        desc,
-        image: image || "",
-      };
-  
+      } 
       try {
         setLoading(true);
+        const base64 = await AsyncStorage.getItem(TEMP_IMAGE_KEY);
+
+        const newProduct = {
+          name,
+          category,
+          price: numericPrice,
+          description: description,
+          image: base64  || "",
+        };
+
         const id = await addDocument("products", newProduct);
-        console.log("Đã thêm sản phẩm mới:", id);
-        Alert.alert("Thành công", "Đã thêm món ăn mới!");
+        await clearTempImage();
+        Toast.show({
+          type: "success",
+          text1: "Thêm món mới thành công",
+          position: "top",
+        })
         resetForm();
         onClose();
         onSuccess?.();
       } catch (err: any) {
-        console.error("Lỗi thêm sản phẩm:", err);
         Alert.alert("Lỗi", "Không thể thêm món ăn, vui lòng thử lại");
       } finally {
         setLoading(false);
       }
+    };
+
+    const handleClose = async () => {
+      await clearTempImage();
+      onClose();
     };
 
 return (
@@ -170,8 +256,8 @@ return (
               <Text style={styles.label}>Mô tả</Text>
               <TextInput
                   placeholder="Mô tả món ăn"
-                  value={desc}
-                  onChangeText={setDesc}
+                  value={description}
+                  onChangeText={setDescription}
                   multiline
                   style={[styles.input, { height: 80, textAlignVertical: "top" }]}
               />
@@ -179,14 +265,33 @@ return (
               <Text style={styles.label}>Hình ảnh</Text>
               <TouchableOpacity style={styles.imageBox} onPress={handleChooseImage}>
                   {image ? (
-                  <Image source={{ uri: image }} style={{ width: "100%", height: "100%" }} />
+                    <View style={styles.imageWrapper}>
+                      <Image
+                        source={{ uri: image }}
+                        style={styles.fullImage}
+                        resizeMode="cover"
+                      />
+                    </View>
                   ) : (
-                  <View style={{ alignItems: "center" }}>
+                    <View style={styles.placeholder}>
                       <Ionicons name="image-outline" size={30} color="#999" />
                       <Text style={{ color: "#666", marginTop: 6 }}>Chọn hình ảnh món ăn</Text>
-                  </View>
+                    </View>
                   )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              <ActionSheet
+                ref={actionSheetRef}
+                title={"Chọn hình ảnh món ăn"}
+                options={["Chụp ảnh", "Chọn từ thư viện", "Hủy"]}
+                cancelButtonIndex={2}
+                onPress={(index) => {
+                  if (index === 0) pickFromCamera();
+                  if (index === 1) pickFromLibrary();
+                }}
+              />
+
+
+
               </ScrollView>
 
               {/* Buttons */}
@@ -204,7 +309,8 @@ return (
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.btn, { backgroundColor: "#eee" }]}
-                onPress={() => {
+                onPress={async () => {
+                  await clearTempImage();
                   resetForm();
                   onClose();
                 }}
@@ -246,13 +352,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     },
     imageBox: {
-    height: 120,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 6,
+      borderWidth: 1,
+      borderColor: "#ccc",
+      borderRadius: 8,
+      justifyContent: "center",
+      alignItems: "center",
+      marginTop: 6,
+      padding: 3,
+      overflow: "hidden",
+      backgroundColor: "#fff",
+      minHeight: 120, // để có khung ban đầu khi chưa chọn ảnh
+    },
+    imageWrapper: {
+      width: "100%",
+      borderRadius: 8,
+      overflow: "hidden",
+    },
+    fullImage: {
+      width: "100%",
+      aspectRatio: 1, // ảnh vuông, auto co theo tỉ lệ
+      borderRadius: 8,
+    },
+    placeholder: {
+      alignItems: "center",
+      justifyContent: "center",
+      height: 120,
+      width: "100%",
     },
     footer: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
     btn: {

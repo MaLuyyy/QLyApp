@@ -2,17 +2,23 @@ import { Product } from "@/app/types/product";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { deleteDocument } from "@/services/firestoreService";
+import Toast from "react-native-toast-message";
 
 interface Props {
   visible: boolean;
   product: Product | null;
   onClose: () => void;
+  onDeleted?: (id: string) => void;
+  onEdit?: (product: Product) => void;
 }
 
 export default function ProductActionModal({
   visible,
   product,
   onClose,
+  onDeleted,
+  onEdit
 }: Props) {
 
   const handleView = () => {
@@ -21,20 +27,38 @@ export default function ProductActionModal({
   };
 
   const handleEdit = () => {
-    console.log("Chỉnh sửa:", product?.id);
+    if (!product) return;
     onClose();
+    onEdit?.(product);
   };
 
   const handleDelete = () => {
+    if (!product?.id) return;
     Alert.alert(
       "Xác nhận",
       `Bạn có chắc muốn xóa "${product?.name}" không?`,
       [
         { text: "Hủy", style: "cancel" },
-        { text: "Xóa", style: "destructive", onPress: () => console.log("Xóa:", product?.id) },
+        { text: "Xóa", style: "destructive",
+          onPress: async() => {
+            try{
+              await deleteDocument("products", product?.id);
+              Toast.show({
+                type: "error",
+                text1: "Xóa món ăn thành công",
+                position: "top"
+              })
+              onClose();
+              onDeleted?.(product?.id);
+            }
+            catch(error){
+              console.error("Lỗi khi xóa sản phẩm:", error);
+              Alert.alert("Lỗi", "Không thể xóa sản phẩm. Vui lòng thử lại.");
+            }
+          }
+        },
       ]
     );
-    onClose();
   };
 
   
@@ -63,12 +87,18 @@ export default function ProductActionModal({
           <Text style={styles.modalText}>Chỉnh sửa</Text>
         </Pressable>
 
-        <Pressable style={[styles.modalAction, { backgroundColor: "#fee2e2" }]} onPress={handleDelete}>
+        <Pressable 
+          style={[styles.modalAction, { backgroundColor: "#fee2e2" }]} 
+          onPress={handleDelete}
+        >
           <Ionicons name="trash-outline" size={20} color="red" style={{ marginRight: 8 }} />
           <Text style={{ color: "red", fontWeight: "500" }}>Xóa món ăn</Text>
         </Pressable>
 
-        <Pressable style={styles.cancelBtn} onPress={onClose}>
+        <Pressable 
+          style={styles.cancelBtn} 
+          onPress={onClose}
+        >
           <Text style={{ fontWeight: "600" }}>Hủy</Text>
         </Pressable>
       </View>

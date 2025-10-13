@@ -153,7 +153,7 @@ export default function SignInScreen(){
         Toast.show({
           type: "success",
           text1: "Đăng nhập thành công (Admin)",
-          position: "bottom",
+          position: "top",
         });
     
         router.replace("/drawer/HomeScreen");
