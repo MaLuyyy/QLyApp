@@ -22,6 +22,7 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
     const [price, setPrice] = useState("");
     const [description, setDescription] = useState("");
     const [image, setImage] = useState<string | null>(null);
+    const [quantity, setQuantity] = useState("");
 
     const CATEGORY_ORDER = ["foods", "drinks", "fruits", "snacks", "other"];
     const [categories] = useState<string[]>(CATEGORY_ORDER);
@@ -117,6 +118,7 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
         setName("");
         setCategory("");
         setPrice("");
+        setQuantity("");
         setDescription("");
         setImage(null);
         await AsyncStorage.removeItem(TEMP_IMAGE_KEY);
@@ -128,6 +130,7 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
 
     const handleAdd = async () => {
       const numericPrice = Number(price);
+      const numericQuantity = Number(quantity);
       if (!name.trim()) {
         Alert.alert("Lỗi", "Vui lòng nhập tên món ăn");
         return;
@@ -144,6 +147,10 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
         Alert.alert("Lỗi", "Giá phải chia hết cho 1000 (VD: 10000, 25000)");
         return;
       } 
+      if (!numericQuantity || numericQuantity <= 0) {
+        Alert.alert("Lỗi", "Vui lòng nhập số lượng hợp lệ");
+        return;
+      }
       try {
         setLoading(true);
         const base64 = await AsyncStorage.getItem(TEMP_IMAGE_KEY);
@@ -152,6 +159,7 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
           name,
           category,
           price: numericPrice,
+          quantity: numericQuantity,
           description: description,
           image: base64  || "",
         };
@@ -253,6 +261,15 @@ return (
                   style={styles.input}
               />
 
+              <Text style={styles.label}>Số lượng</Text>
+              <TextInput
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  placeholder="0"
+                  keyboardType="numeric"
+                  style={styles.input}
+              />
+
               <Text style={styles.label}>Mô tả</Text>
               <TextInput
                   placeholder="Mô tả món ăn"
@@ -328,28 +345,28 @@ return (
 const styles = StyleSheet.create({
     overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 16 },
     modalBox: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
+      backgroundColor: "#fff",
+      borderRadius: 12,
+      padding: 16,
     },
     title: { fontSize: 18, fontWeight: "bold", textAlign: "center", marginBottom: 12 },
     label: { marginTop: 10, marginBottom: 4, fontWeight: "500" },
     input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: "#fff",
+      borderWidth: 1,
+      borderColor: "#ccc",
+      borderRadius: 8,
+      padding: 10,
+      backgroundColor: "#fff",
     },
     selectBox: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: "#fff",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: "#ccc",
+      borderRadius: 8,
+      padding: 10,
+      backgroundColor: "#fff",
     },
     imageBox: {
       borderWidth: 1,
@@ -358,7 +375,7 @@ const styles = StyleSheet.create({
       justifyContent: "center",
       alignItems: "center",
       marginTop: 6,
-      padding: 3,
+      padding: 1,
       overflow: "hidden",
       backgroundColor: "#fff",
       minHeight: 120, // để có khung ban đầu khi chưa chọn ảnh
@@ -381,11 +398,11 @@ const styles = StyleSheet.create({
     },
     footer: { flexDirection: "row", justifyContent: "space-between", marginTop: 16 },
     btn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginHorizontal: 4,
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      alignItems: "center",
+      marginHorizontal: 4,
     },
     selectedText: { fontSize: 14, color: "#333" },
     dropdownWrapper: {

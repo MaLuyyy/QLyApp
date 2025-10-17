@@ -44,7 +44,7 @@ export default function ProductActionModal({
             try{
               await deleteDocument("products", product?.id);
               Toast.show({
-                type: "error",
+                type: "success",
                 text1: "Xóa món ăn thành công",
                 position: "top"
               })
