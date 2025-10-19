@@ -162,6 +162,8 @@ export default function AddProductModal({visible, onClose, onSuccess }: Props){
           quantity: numericQuantity,
           description: description,
           image: base64  || "",
+          createAt: new Date().toISOString(),
+          updateAt: new Date().toISOString(),
         };
 
         const id = await addDocument("products", newProduct);

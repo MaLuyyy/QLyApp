@@ -4,6 +4,8 @@ import React from "react";
 import { Alert, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { deleteDocument } from "@/services/firestoreService";
 import Toast from "react-native-toast-message";
+import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 
 interface Props {
   visible: boolean;
@@ -21,8 +23,11 @@ export default function ProductActionModal({
   onEdit
 }: Props) {
 
+  const router = useRouter();
+
   const handleView = () => {
-    console.log("Xem chi tiết:", product?.id);
+    if (!product) return;
+    router.push(`/screen/DetailProduct/${product.id}`);
     onClose();
   };
 

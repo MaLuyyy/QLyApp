@@ -2,30 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { getAllDocuments } from "../../services/firestoreService";
+import { Order } from "../types/order";
 
-// Kiểu dữ liệu trong order
-interface OrderItem {
-  productId: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
-
-interface PaymentMethod {
-  cardId?: string;
-}
-
-interface Order {
-  id: string;
-  fullName: string;
-  address: string;
-  phoneNumber: string;
-  paymentMethod: PaymentMethod;
-  notify: string;
-  items: OrderItem[];
-  userId: string;
-  createdAt?: string;
-}
 
 export default function OrderScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -39,7 +17,7 @@ export default function OrderScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []);        
 
   const renderItem = ({ item }: { item: Order }) => (
     <TouchableOpacity

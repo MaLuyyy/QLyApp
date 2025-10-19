@@ -153,13 +153,21 @@ export default function ProductScreen() {
 
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
-          <View style={styles.tags}>
-            <Text style={[styles.tag, styles.category]}>
-              {getCategoryFromName(item.category)}
-            </Text>
-          </View>
           <View style={styles.footer}>
             <Text style={styles.price}>{item.price.toLocaleString()} đ</Text>
+          </View>
+          <View style={styles.tags}>
+            <Text 
+            style={[styles.tag, 
+              {
+                backgroundColor: item.quantity === 0 
+                ? "#ef4444"
+                : item.quantity <=10
+                ? "#f97316" 
+                : "#22c55e"
+              }]}>
+              Số lượng: {item.quantity}
+            </Text>
           </View>
         </View>
 
@@ -335,7 +343,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   addButton: {
-    backgroundColor: "#f97316",
+    backgroundColor: "#87CEEB",
     alignSelf: "flex-end",
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -420,7 +428,7 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1 },
   name: { fontSize: 15, fontWeight: "bold", marginBottom: 4 },
-  tags: { flexDirection: "row", marginBottom: 4 },
+  tags: { flexDirection: "row"},
   tag: {
     fontSize: 12,
     paddingHorizontal: 6,
@@ -430,8 +438,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     overflow: "hidden",
   },
-  category: { backgroundColor: "#f97316" },
-  footer: { flexDirection: "row", alignItems: "center" },
+  footer: { flexDirection: "row", alignItems: "center", marginBottom: 4  },
   price: { color: "#ef4444", fontWeight: "bold", marginRight: 8 },
   centerBox: { flex: 1, justifyContent: "center", alignItems: "center" },
 });

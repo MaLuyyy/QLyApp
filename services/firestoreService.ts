@@ -44,6 +44,29 @@ export const getAllDocuments = async (collectionName: string, pageSize = 100) =>
   return docs;
 };
 
+// Lấy 1 document theo ID
+export const getDocumentById = async (collectionName: string, id: string) => {
+  const token = await getToken();
+
+  const res = await axios.get(`${baseUrl}/${collectionName}/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const doc = res.data;
+
+  if (!doc || !doc.fields) throw new Error("Không tìm thấy document");
+
+  // Parse dữ liệu Firestore -> JS object
+  const parsedDoc = {
+    id: doc.name.split("/").pop(),
+    ...Object.fromEntries(
+      Object.entries(doc.fields).map(([k, v]: any) => [k, parseValue(v)])
+    ),
+  };
+
+  return parsedDoc;
+};
+
 // 🧩 Lấy documents có phân trang
 export const getDocumentsWithPagination = async (
   collectionName: string,

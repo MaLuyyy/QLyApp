@@ -1,14 +1,14 @@
+import { Product } from "@/app/types/product";
+import { updateDocument } from "@/services/firestoreService";
+import { getCategoryFromName } from "@/utils/helpers";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { use, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, ScrollView, TextInput, TouchableOpacity, View, StyleSheet, Modal, Text, Image } from "react-native";
-import ActionSheet from "react-native-actionsheet";
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from "expo-image-picker";
-import { updateDocument } from "@/services/firestoreService";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Animated, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import ActionSheet from "react-native-actionsheet";
 import Toast from "react-native-toast-message";
-import { Ionicons } from "@expo/vector-icons";
-import { getCategoryFromName } from "@/utils/helpers";
-import { Product } from "@/app/types/product";
 
 
 interface Props{
@@ -145,7 +145,7 @@ export default function EditProductModal({visible, onClose, onSuccess, product}:
           Alert.alert("Lỗi", "Giá phải chia hết cho 1000 (VD: 10000, 25000)");
           return;
         } 
-        if (!numericQuantity || numericQuantity <= 0) {
+        if (isNaN(numericQuantity) || numericQuantity < 0) {
           Alert.alert("Lỗi", "Vui lòng nhập số lượng hợp lệ");
           return;
         }
