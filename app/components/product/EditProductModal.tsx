@@ -160,6 +160,7 @@ export default function EditProductModal({visible, onClose, onSuccess, product}:
             quantity: numericQuantity,
             description: description,
             image: base64  || "",
+            updateAt: new Date().toISOString(),
           };
 
           if (!product?.id) throw new Error("Thiếu ID món ăn");

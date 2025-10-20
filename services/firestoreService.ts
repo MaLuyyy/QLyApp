@@ -132,8 +132,12 @@ export const updateDocument = async (collectionName: string, id: string, data: a
     })
   );
 
+  const updateMask = Object.keys(data)
+    .map((field) => `updateMask.fieldPaths=${encodeURIComponent(field)}`)
+    .join("&");
+
   const res = await axios.patch(
-    `${baseUrl}/${collectionName}/${id}`,
+    `${baseUrl}/${collectionName}/${id}?${updateMask}`,
     { fields },
     { headers: { Authorization: `Bearer ${token}` } }
   );
