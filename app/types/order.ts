@@ -8,15 +8,17 @@ export interface Order {
     notify: string;
     items: OrderItem[];
     userId: string;
+    status: string;
+    totalPrice: number;
     createdAt?: string;
 }
-interface OrderItem {
+export interface OrderItem {
   productId: string;
   name: string;
   quantity: number;
   price: number;
 }
   
-interface PaymentMethod {
+export interface PaymentMethod {
   cardId?: string;
 }  

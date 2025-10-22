@@ -27,6 +27,7 @@ export default function EditProductModal({visible, onClose, onSuccess, product}:
     
     const CATEGORY_ORDER = ["foods", "drinks", "fruits", "snacks", "other"];
     const [categories] = useState<string[]>(CATEGORY_ORDER);
+    
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const animatedHeight = useRef(new Animated.Value(0)).current;
     const OPTION_HEIGHT = 40; // chiều cao 1 option

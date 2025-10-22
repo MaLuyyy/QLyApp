@@ -13,13 +13,59 @@ const getToken = async () => {
 };
 
 // Helper parse giá trị Firestore -> JS
-const parseValue = (v: any) => {
-  const [type, value] = Object.entries(v)[0];
-  if (type === "integerValue") return parseInt(value as string, 10);
-  if (type === "doubleValue") return parseFloat(value as string);
-  if (type === "booleanValue") return Boolean(value);
-  return value; // stringValue, timestampValue,...
+const parseValue = (v: any): any => {
+  if (!v) return null;
+
+  if (v.mapValue) {
+    const fields = v.mapValue.fields || {};
+    return Object.fromEntries(Object.entries(fields).map(([k, val]) => [k, parseValue(val)]));
+  }
+
+  if (v.arrayValue) {
+    const values = v.arrayValue.values || [];
+    return values.map((val: any) => parseValue(val));
+  }
+
+  if (v.integerValue !== undefined) return parseInt(v.integerValue, 10);
+  if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
+  if (v.booleanValue !== undefined) return v.booleanValue;
+  if (v.stringValue !== undefined) return v.stringValue;
+  if (v.timestampValue !== undefined) return v.timestampValue;
+
+  return v; // fallback
 };
+
+// Helper để chuyển JS value → Firestore field format
+const toFirestoreValue = (value: any): any => {
+  if (value === null || value === undefined) return { nullValue: null };
+
+  if (typeof value === "string") return { stringValue: value };
+  if (typeof value === "number") return Number.isInteger(value)
+    ? { integerValue: value }
+    : { doubleValue: value };
+  if (typeof value === "boolean") return { booleanValue: value };
+
+  if (Array.isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map((v) => toFirestoreValue(v)),
+      },
+    };
+  }
+
+  if (typeof value === "object") {
+    return {
+      mapValue: {
+        fields: Object.fromEntries(
+          Object.entries(value).map(([k, v]) => [k, toFirestoreValue(v)])
+        ),
+      },
+    };
+  }
+
+  return { stringValue: String(value) }; // fallback
+};
+
 
 // Lấy tất cả documents
 export const getAllDocuments = async (collectionName: string, pageSize = 100) => {
@@ -125,11 +171,7 @@ export const updateDocument = async (collectionName: string, id: string, data: a
   const token = await getToken();
 
   const fields = Object.fromEntries(
-    Object.entries(data).map(([k, v]) => {
-      if (typeof v === "number") return [k, { integerValue: v }];
-      if (typeof v === "boolean") return [k, { booleanValue: v }];
-      return [k, { stringValue: v }];
-    })
+    Object.entries(data).map(([k, v]) => [k, toFirestoreValue(v)])
   );
 
   const updateMask = Object.keys(data)

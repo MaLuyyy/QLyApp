@@ -1,6 +1,7 @@
 import EditProductModal from "@/app/components/product/EditProductModal";
 import { Product } from "@/app/types/product";
 import { deleteDocument, getDocumentById, updateDocument } from "@/services/firestoreService";
+import { getCategoryFromName } from "@/utils/helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -171,6 +172,10 @@ export default function ProductDetailScreen() {
           />
         </View>
 
+          <View style={styles.row}>
+            <Text style={styles.label}>Danh mục:</Text>
+            <Text style={styles.category}>{getCategoryFromName(product.category)}</Text>
+          </View>
 
           <View style={styles.row}>
             <Text style={styles.label}>Giá bán:</Text>
@@ -359,7 +364,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     padding: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
   },
   btn: {
     flexDirection: "row",
@@ -444,5 +449,10 @@ const styles = StyleSheet.create({
   Date:{
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  category:{
+    fontSize: 15,
+    color: "black",
+    fontWeight:"bold"
   }
 });
