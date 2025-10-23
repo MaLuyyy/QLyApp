@@ -87,7 +87,8 @@ export default function DrawerLayout() {
       <Drawer.Screen name="HomeScreen" options={{ title: "Trang chủ" }} />
       <Drawer.Screen name="ProductScreen" options={{ title: "Sản phẩm" }} />
       <Drawer.Screen name="OrderScreen" options={{ title: "Đơn hàng" }} />
-      <Drawer.Screen name="UserScreen" options={{ title: "Người dùng" }} />
+      <Drawer.Screen name="CustomerScreen" options={{ title: "Khách hàng" }} />
+      <Drawer.Screen name="StaffScreen" options={{ title: "Nhân viên" }} />
     </Drawer>
   );
 }

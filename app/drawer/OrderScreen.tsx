@@ -21,8 +21,8 @@ export default function OrderScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [pageToken, setPageToken] = useState<string | null>(null);
   const router = useRouter();
+  
   const [modalVisible, setModalVisible] = useState(false);
-
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 

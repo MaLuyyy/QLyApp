@@ -113,6 +113,7 @@ export const getDocumentById = async (collectionName: string, id: string) => {
   return parsedDoc;
 };
 
+
 // 🧩 Lấy documents có phân trang
 export const getDocumentsWithPagination = async (
   collectionName: string,
@@ -194,3 +195,51 @@ export const deleteDocument = async (collectionName: string, id: string) => {
     headers: { Authorization: `Bearer ${token}` },
   });
 };
+
+export const countOrdersByUserId = async (userId: string) => {
+  const token = await getToken();
+  const url = `${baseUrl}:runQuery`;
+
+  const body = {
+    structuredQuery: {
+      from: [{ collectionId: "orders" }],
+      where: {
+        compositeFilter: {
+          op: "AND",
+          filters: [
+            {
+              fieldFilter: {
+                field: { fieldPath: "userId" },
+                op: "EQUAL",
+                value: { stringValue: userId },
+              },
+            },
+            {
+              fieldFilter: {
+                field: { fieldPath: "status" },
+                op: "EQUAL",
+                value: { stringValue: "completed" },
+              },
+            },
+          ],
+        },
+      },
+      select: { fields: [] },
+    },
+  };
+
+  try {
+    const res = await axios.post(url, body, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const documents = res.data.filter((item: any) => item.document);
+    return documents.length;
+  } catch (error: any) {
+    return 0;
+  }
+};
+
